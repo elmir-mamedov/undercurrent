@@ -39,11 +39,21 @@ pmtiles serve tiles --interface=127.0.0.1 --port=8081 --cors=http://localhost:80
 - Labels use the style's `font-faces` property with the JetBrains Mono files, so the style has no `glyphs` URL.
 - The map data is © OpenStreetMap contributors. Keep the attribution visible.
 
+## Local testing
+
+Every change runs on a local version of the project before anything is deployed to the web. This holds for the whole project, including hosting and services added later.
+
+- The local version runs entirely on this machine: the package through `uv run`, the map through the two servers under [Web](#web), and the release image through `docker build -t undercurrent:local .` and `docker run --rm undercurrent:local`. It reads only local data and never calls or writes to anything deployed.
+- In a worktree, serve that worktree's `web/`. Run the tile server from the main checkout, since `tiles/` isn't committed.
+- Settings committed to the repo point at the local version, like `TILES` in `web/script.js`. Production values never become the committed default.
+- Anything new that gets deployed, such as a host, a server, a database or a secret, gets a local counterpart in the same change, and this file says how to start it.
+- Passing checks aren't enough. Start the local version and try the change there before asking to push.
+
 ## Branches
 
 - `main` is protected: no direct pushes, force-pushes or deletion. It accepts only pull requests that passed CI, merged with Rebase and merge.
 - Changes reach `main` through a release branch, `release/<version>`. Only one is open at a time. List it with `git fetch origin && git branch -r --list 'origin/release/*'`. If none is open, cut one from `main` without checking it out: `git push origin origin/main:refs/heads/release/<version>`.
-- The main checkout stays on the open release branch. Never commit on `main` or on the release branch, and never switch branches, edit or commit in the main checkout. Each piece of work gets its own worktree, on a branch named `<type>/<short-name>` cut from the release branch:
+- The main checkout stays on the open release branch. Never commit on `main` or on the release branch, and never switch branches, edit or commit in the main checkout. It only fast-forwards, to test a release. Each piece of work gets its own worktree, on a branch named `<type>/<short-name>` cut from the release branch:
 
   ```sh
   git fetch origin
@@ -53,7 +63,7 @@ pmtiles serve tiles --interface=127.0.0.1 --port=8081 --cors=http://localhost:80
 
 ## Pull requests
 
-Once a change is committed and the checks pass locally, ask before pushing. Then:
+Once a change is committed, the checks pass locally and the change works in the local version, ask before pushing. Then:
 
 1. Run `git fetch origin`. If the release branch has moved, `git merge-base --is-ancestor origin/release/<version> HEAD` fails. In that case, rebase onto the release branch and run the checks again.
 2. Push the branch, run `gh pr create --base release/<version>`, then `gh pr checks <number> --watch`.
@@ -67,8 +77,9 @@ Merge the release branch into `main` or tag a release only when asked.
 ## Releases
 
 1. Open the last pull request into the release branch from `chore/release-<version>`. It bumps `version` in `pyproject.toml`, runs `uv lock`, and commits as `chore: release <version>`.
-2. Open a pull request from `release/<version>` into `main` and merge it with `--rebase` after CI passes.
-3. Run `git fetch origin && git tag v<version> origin/main && git push origin v<version>`, then delete the release branch.
+2. Bring the main checkout up to date with `git fetch origin && git merge --ff-only origin/release/<version>`, then test the whole release in the local version, image included. Fix anything broken through a pull request into the release branch, then repeat this step.
+3. Open a pull request from `release/<version>` into `main` and merge it with `--rebase` after CI passes.
+4. Run `git fetch origin && git tag v<version> origin/main && git push origin v<version>`, then delete the release branch.
 
 The release workflow refuses a tag that isn't on `main` or that doesn't match the version in `pyproject.toml`. Only admins can create `v*` tags, and no one can move or delete them.
 
