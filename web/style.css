@@ -1,0 +1,72 @@
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("vendor/jetbrains-mono@2.304/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("vendor/jetbrains-mono@2.304/JetBrainsMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --bg: #020a04;
+  --phosphor: #7dffa0;
+  --dim: #2f9a52;
+  --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+}
+
+#map {
+  position: fixed;
+  inset: 0;
+}
+
+/* Scanlines and a dark vignette, like a CRT. */
+#crt {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / 22%) 2px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 55%) 100%);
+}
+
+/* Sized so the status line fits a phone's width. */
+#hud {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: max(1rem, env(safe-area-inset-left));
+  z-index: 2;
+  pointer-events: none;
+  color: var(--phosphor);
+  font: 700 clamp(9px, calc((100vw - 2rem) / 46), 13px) / 1.4 var(--mono);
+  white-space: pre;
+  text-shadow: 0 0 6px rgb(125 255 160 / 45%);
+}
+
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: rgb(2 10 4 / 80%);
+  color: var(--dim);
+  font: 11px / 1.4 var(--mono);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--dim);
+}
+
+.maplibregl-ctrl-attrib a:hover,
+.maplibregl-ctrl-attrib a:focus-visible {
+  color: var(--phosphor);
+}
