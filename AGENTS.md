@@ -6,6 +6,9 @@
 - `tests/`: pytest tests
 - `.github/workflows/ci.yml`: format check, lint, type check and tests on every pull request and every push to `main`
 - `.github/workflows/release.yml`: on a `v*` tag on `main`, builds `Dockerfile`, pushes `ghcr.io/elmir-mamedov/undercurrent:<tag>` and publishes a GitHub Release
+- `web/`: static map page, with no build step
+- `web/vendor/`: pinned third-party files (MapLibre GL JS 6.16.0, JetBrains Mono 2.304). They're copied in, not installed; update one by replacing its files.
+- `tiles/prague.pmtiles`: local OpenStreetMap vector tile archive, not committed
 
 ## Commands
 
@@ -19,11 +22,28 @@ uv run pytest
 
 CI runs the same with `uv sync --locked` and `ruff format --check`. Add dependencies with `uv add` (`uv add --dev` for tooling) and commit `uv.lock` together with `pyproject.toml`.
 
+## Web
+
+Serve `web/` and the tile archive locally, then open http://localhost:8000/:
+
+```sh
+python3 -m http.server 8000 --bind 127.0.0.1 --directory web
+pmtiles serve tiles --interface=127.0.0.1 --port=8081 --cors=http://localhost:8000,http://127.0.0.1:8000 --public-url=http://localhost:8081
+```
+
+- `TILES` in `web/script.js` points at the local tile server.
+- To regenerate the archive, run `pmtiles extract https://build.protomaps.com/<YYYYMMDD>.pmtiles tiles/prague.pmtiles --bbox=14.0,49.8,14.95,50.35`.
+- The style reads the Protomaps basemap layers `roads`, `water`, `buildings`, `landuse` and `places`, and tells features apart by `kind` and `kind_detail`.
+  - `landcover` only exists at zoom levels 5–7, below the map's minimum zoom of 9, so the style doesn't use it.
+  - Pedestrian streets and living streets are drawn as streets, not paths.
+- Labels use the style's `font-faces` property with the JetBrains Mono files, so the style has no `glyphs` URL.
+- The map data is © OpenStreetMap contributors. Keep the attribution visible.
+
 ## Branches
 
 - `main` is protected: no direct pushes, force-pushes or deletion. It accepts only pull requests that passed CI, merged with Rebase and merge.
 - Changes reach `main` through a release branch, `release/<version>`. Only one is open at a time. List it with `git fetch origin && git branch -r --list 'origin/release/*'`. If none is open, cut one from `main` without checking it out: `git push origin origin/main:refs/heads/release/<version>`.
-- Never commit on `main` or on the release branch, and never switch branches, edit or commit in the main checkout. Each piece of work gets its own worktree, on a branch named `<type>/<short-name>` cut from the release branch:
+- The main checkout stays on the open release branch. Never commit on `main` or on the release branch, and never switch branches, edit or commit in the main checkout. Each piece of work gets its own worktree, on a branch named `<type>/<short-name>` cut from the release branch:
 
   ```sh
   git fetch origin
